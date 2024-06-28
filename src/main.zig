@@ -1,24 +1,56 @@
 const std = @import("std");
+const wikipedia = @import("wikipedia_read.zig");
+
+fn get_relative_path(allocator: std.mem.Allocator, rel_path: []const u8) []u8 {
+    const cwd = std.fs.cwd().realpathAlloc(allocator, ".") catch @panic("Could not get current working directory");
+    defer allocator.free(cwd);
+
+    const file_path_resolver = [_][]const u8{ cwd, rel_path };
+    const resolved_path = std.fs.path.resolve(allocator, &file_path_resolver) catch @panic("Unable to resolve path");
+    return resolved_path;
+}
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        const deinit_status = gpa.deinit();
+        //fail test; can't try in defer as defer is executed after we return
+        if (deinit_status == .leak) std.testing.expect(false) catch @panic("There is a memory leak");
+    }
+    const allocator = gpa.allocator();
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    var args = try std.process.argsWithAllocator(allocator);
+    defer args.deinit();
+    if (!args.skip()) {
+        std.log.err("No arguments provided, including the executable name", .{});
+        std.process.exit(1);
+    }
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    //Get the path from the cmd line arguments
+    const file_path_opt = args.next();
+    if (file_path_opt == null) {
+        std.log.err("No file path provided", .{});
+        std.process.exit(1);
+    }
 
-    try bw.flush(); // don't forget to flush!
+    //Get the absolute path from the relative path
+    const resolved_path = get_relative_path(allocator, file_path_opt.?);
+    defer allocator.free(resolved_path);
+    std.log.debug("Resolved path: {s}", .{resolved_path});
+
+    //Open the file
+    var fp = std.fs.openFileAbsolute(resolved_path, .{ .mode = std.fs.File.OpenMode.read_only }) catch @panic("Failed to open file");
+
+    //Read from the file into a buffer
+    var buff: [100]u8 = undefined;
+    const bytes_read = fp.read(&buff) catch |err| blk: {
+        std.log.warn("Could not read from file {}", .{err});
+        break :blk 0;
+    };
+    std.log.info("Read {} bytes, {s}", .{ bytes_read, buff });
+
+    _ = wikipedia.find_text_tag(allocator, fp) catch @panic("Failed to read from file");
 }
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
+//test "simple test" {
+//}
