@@ -1,5 +1,16 @@
 const std = @import("std");
+//const libxml2 = @cImport({
+//    @cInclude("libxml/xmlreader.h");
+//});
 //const testing = std.testing;
+const libxml2 = @cImport({
+    @cInclude("libxml/xmlreader.h");
+});
+
+pub fn init() void {
+    //return;
+    libxml2.xmlInitParser();
+}
 
 const FindTextTagError = std.mem.Allocator.Error || std.fs.File.ReadError;
 

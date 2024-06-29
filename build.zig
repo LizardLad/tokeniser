@@ -1,8 +1,5 @@
 const std = @import("std");
 
-// Although this function looks imperative, note that its job is to
-// declaratively construct a build graph that will be executed by an external
-// runner.
 pub fn build(b: *std.Build) void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
@@ -35,6 +32,27 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    if (b.systemIntegrationOption("xml2", .{})) {
+        const xml2_config = b.run(&.{ "xml2-config", "--cflags" })[2..];
+        exe.addIncludePath(.{ .cwd_relative = xml2_config });
+
+        exe.linkSystemLibrary("xml2");
+    } else {
+        if (b.lazyDependency("libxml2", .{ .optimize = optimize, .target = target })) |dep| {
+            exe.linkLibrary(dep.artifact("xml2"));
+        } else {
+            @panic("Did not link xml2");
+        }
+    }
+
+    if (b.systemIntegrationOption("c", .{})) {
+        exe.linkSystemLibrary("c");
+        exe.linkSystemLibrary("c++");
+    } else {
+        exe.linkLibC();
+        exe.linkLibCpp();
+    }
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default

@@ -49,6 +49,7 @@ pub fn main() !void {
     };
     std.log.info("Read {} bytes, {s}", .{ bytes_read, buff });
 
+    wikipedia.init();
     _ = wikipedia.find_text_tag(allocator, fp) catch @panic("Failed to read from file");
 }
 
