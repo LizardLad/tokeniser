@@ -2,3 +2,5 @@
 !.gitignore
 *.out
 zig-out
+/target
+build/
