@@ -8,13 +8,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -g")
 
 find_package(LibXml2 REQUIRED)
+find_package(OpenMP REQUIRED)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/src)
 include_directories(${LIBXML2_INCLUDE_DIR})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBXML2_CXX_FLAGS} -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBXML2_CXX_FLAGS} -g -O3")
 
 
-add_executable(tokeniser src/main.cpp)
+add_executable(tokeniser src/main.cpp src/WikipediaReader.cpp src/Tokeniser.cpp)
 #target_link_libraries(tokeniser "${TORCH_LIBRARIES}")
-target_link_libraries(tokeniser "${LIBXML2_LIBRARIES}")
+target_link_libraries(tokeniser "${LIBXML2_LIBRARIES}" OpenMP::OpenMP_CXX)
 set_property(TARGET tokeniser PROPERTY CXX_STANDARD 17)
 
 #if(MSVC)
